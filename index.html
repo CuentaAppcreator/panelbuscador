@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Panel de Subida a GitHub</title>
+  <title>Panel de Subida a GitHu</title>
   <style>
     :root {
       --bg: #121212;
@@ -66,6 +66,7 @@
       font-weight: bold;
       margin-top: 1em;
       color: #90caf9;
+      min-height: 1.5em;
     }
 
     @media (max-width: 600px) {
@@ -89,7 +90,7 @@
   <label>🧩 Código a insertar:</label>
   <textarea id="codigo" placeholder="Pega aquí el código HTML a agregar..."></textarea>
 
-  <button onclick="agregarCodigo()">📤 Publicar en GitHub</button>
+  <button onclick="agregarCodigo()">📤 Publicar poster en buscador</button>
 
   <div class="status" id="status"></div>
 
@@ -100,11 +101,26 @@
   <button onclick="copiarTexto2()">📄 Copiar Texto 2</button>
 
   <script>
+    // Función para decodificar base64 (Unicode-safe)
+    function base64DecodeUnicode(str) {
+      return decodeURIComponent(atob(str).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+    }
+
+    // Función para codificar base64 (Unicode-safe)
+    function base64EncodeUnicode(str) {
+      return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+        function(match, p1) {
+          return String.fromCharCode('0x' + p1);
+        }));
+    }
+
     async function agregarCodigo() {
       const token = document.getElementById('token').value.trim();
       const nuevoCodigo = document.getElementById('codigo').value.trim();
       const status = document.getElementById('status');
-      
+
       if (!token || !nuevoCodigo) {
         status.textContent = "⚠️ Token o código faltante.";
         return;
@@ -121,21 +137,31 @@
       status.textContent = "⏳ Cargando archivo desde GitHub...";
 
       try {
+        // Obtener archivo actual
         let respuesta = await fetch(apiUrl, { headers });
         if (!respuesta.ok) throw new Error("No se pudo obtener el archivo.");
 
         let datos = await respuesta.json();
         const sha = datos.sha;
-        const contenido = atob(datos.content.replace(/\n/g, ''));
-        
+        const contenido = base64DecodeUnicode(datos.content.replace(/\n/g, ''));
+
         const marcador = "<!--ABAJO AGREGAR NUEVO CONTENIDO -->";
+
         if (!contenido.includes(marcador)) {
           status.textContent = "❌ El marcador no se encontró en el archivo.";
           return;
         }
 
+        // Verificamos que no se repita el código
+        if (contenido.includes(nuevoCodigo)) {
+          status.textContent = "⚠️ Este código ya está agregado.";
+          return;
+        }
+
+        // Insertar nuevo código justo debajo del marcador, acumulando
         const nuevoContenido = contenido.replace(marcador, marcador + "\n" + nuevoCodigo);
-        const base64Nuevo = btoa(unescape(encodeURIComponent(nuevoContenido)));
+
+        const base64Nuevo = base64EncodeUnicode(nuevoContenido);
 
         const payload = {
           message: "Nuevo contenido agregado desde el panel",
@@ -155,7 +181,8 @@
           status.textContent = "✅ Código agregado correctamente.";
           document.getElementById('codigo').value = '';
         } else {
-          status.textContent = "❌ Error al subir el código.";
+          const errorData = await subida.json();
+          status.textContent = "❌ Error al subir el código: " + (errorData.message || subida.statusText);
         }
       } catch (err) {
         status.textContent = "❌ Error: " + err.message;
@@ -163,14 +190,14 @@
     }
 
     function copiarTexto1() {
-      const texto = `ghp_JufHom3Oit7F5XqiL`;
+      const texto = `ghp_4S1HDfVxBXdoJiL5`;
       navigator.clipboard.writeText(texto).then(() => {
         alert("Texto 1 copiado ✅");
       });
     }
 
     function copiarTexto2() {
-      const texto = `nysDyU7tVF5vN38ArGY`;
+      const texto = `v4CerTE1lkF0wi3TWYkO`;
       navigator.clipboard.writeText(texto).then(() => {
         alert("Texto 2 copiado ✅");
       });
