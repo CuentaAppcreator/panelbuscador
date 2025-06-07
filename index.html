@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel de Subida a GitHub</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --text: #e0e0e0;
+      --accent: #1e88e5;
+      --button-bg: #1f1f1f;
+      --button-hover: #333;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', sans-serif;
+      padding: 2em;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    h2, h3 {
+      color: var(--accent);
+    }
+
+    input, textarea, button {
+      width: 100%;
+      font-size: 16px;
+      margin-top: 0.5em;
+      margin-bottom: 1em;
+      padding: 0.8em;
+      border: none;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      font-family: monospace;
+      height: 180px;
+      resize: vertical;
+      background-color: #1a1a1a;
+      color: var(--text);
+    }
+
+    input[type="password"] {
+      background-color: #1a1a1a;
+      color: var(--text);
+    }
+
+    button {
+      background-color: var(--accent);
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #1565c0;
+    }
+
+    .status {
+      font-weight: bold;
+      margin-top: 1em;
+      color: #90caf9;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 1em;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>🚀 Panel para agregar bloques al repositorio GitHub</h2>
+
+  <label>🔑 Token de GitHub:
+    <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxx" />
+  </label>
+
+  <label>🧩 Código a insertar:</label>
+  <textarea id="codigo" placeholder="Pega aquí el código HTML a agregar..."></textarea>
+
+  <button onclick="agregarCodigo()">📤 Publicar en GitHub</button>
+
+  <div class="status" id="status"></div>
+
+  <hr><br>
+
+  <h3>📋 Copiar textos rápidos:</h3>
+  <button onclick="copiarTexto1()">📄 Copiar Texto 1</button>
+  <button onclick="copiarTexto2()">📄 Copiar Texto 2</button>
+
+  <script>
+    async function agregarCodigo() {
+      const token = document.getElementById('token').value.trim();
+      const nuevoCodigo = document.getElementById('codigo').value.trim();
+      const status = document.getElementById('status');
+      
+      if (!token || !nuevoCodigo) {
+        status.textContent = "⚠️ Token o código faltante.";
+        return;
+      }
+
+      const repo = "CuentaAppcreator/Buscador";
+      const path = "index.html";
+      const apiUrl = `https://api.github.com/repos/${repo}/contents/${path}`;
+      const headers = {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github.v3+json"
+      };
+
+      status.textContent = "⏳ Cargando archivo desde GitHub...";
+
+      try {
+        let respuesta = await fetch(apiUrl, { headers });
+        if (!respuesta.ok) throw new Error("No se pudo obtener el archivo.");
+
+        let datos = await respuesta.json();
+        const sha = datos.sha;
+        const contenido = atob(datos.content.replace(/\n/g, ''));
+        
+        const marcador = "<!--ABAJO AGREGAR NUEVO CONTENIDO -->";
+        if (!contenido.includes(marcador)) {
+          status.textContent = "❌ El marcador no se encontró en el archivo.";
+          return;
+        }
+
+        const nuevoContenido = contenido.replace(marcador, marcador + "\n" + nuevoCodigo);
+        const base64Nuevo = btoa(unescape(encodeURIComponent(nuevoContenido)));
+
+        const payload = {
+          message: "Nuevo contenido agregado desde el panel",
+          content: base64Nuevo,
+          sha: sha
+        };
+
+        status.textContent = "📤 Subiendo cambios a GitHub...";
+
+        const subida = await fetch(apiUrl, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify(payload)
+        });
+
+        if (subida.ok) {
+          status.textContent = "✅ Código agregado correctamente.";
+          document.getElementById('codigo').value = '';
+        } else {
+          status.textContent = "❌ Error al subir el código.";
+        }
+      } catch (err) {
+        status.textContent = "❌ Error: " + err.message;
+      }
+    }
+
+    function copiarTexto1() {
+      const texto = `ghp_JufHom3Oit7F5XqiL`;
+      navigator.clipboard.writeText(texto).then(() => {
+        alert("Texto 1 copiado ✅");
+      });
+    }
+
+    function copiarTexto2() {
+      const texto = `nysDyU7tVF5vN38ArGY`;
+      navigator.clipboard.writeText(texto).then(() => {
+        alert("Texto 2 copiado ✅");
+      });
+    }
+  </script>
+</body>
+</html>
